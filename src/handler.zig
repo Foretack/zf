@@ -3,9 +3,9 @@ const zap = @import("zap");
 const fs = @import("std").fs;
 
 pub const Handler = struct {
-    var alloc: std.mem.Allocator = undefined;
-    var saveDirPath: []const u8 = undefined;
-    var linkPrefix: []const u8 = undefined;
+    pub var alloc: std.mem.Allocator = undefined;
+    pub var saveDirPath: []const u8 = undefined;
+    pub var linkPrefix: []const u8 = undefined;
 
     pub fn on_request(r: zap.SimpleRequest) void {
         var generatedName: []const u8 = undefined;
