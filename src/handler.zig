@@ -2,7 +2,7 @@ const std = @import("std");
 const zap = @import("zap");
 const fs = @import("std").fs;
 
-const Handler = struct {
+pub const Handler = struct {
     var alloc: std.mem.Allocator = undefined;
     var saveDirPath: []const u8 = undefined;
     var linkPrefix: []const u8 = undefined;
