@@ -9,7 +9,7 @@ pub fn main() !void {
     var allocator = gpa.allocator();
 
     const config = try loadConfig(allocator, "\\config.json");
-    defer config.deinit(allocator);
+    // defer config.deinit(allocator);
 
     Handler.alloc = allocator;
     Handler.saveDirPath = config.absoluteSaveDir;
@@ -62,12 +62,12 @@ const Config = struct {
     absoluteSaveDir: []u8,
     maxFolderSizeMB: u32,
 
-    pub fn deinit(self: Config, allocator: std.mem.Allocator) void {
-        allocator.destroy(self.port);
-        allocator.free(self.linkPrefix);
-        allocator.free(self.absoluteSaveDir);
-        allocator.destroy(self.maxFolderSizeMB);
-    }
+    // pub fn deinit(self: Config, allocator: std.mem.Allocator) void {
+    //     allocator.destroy(self.port);
+    //     allocator.free(self.linkPrefix);
+    //     allocator.free(self.absoluteSaveDir);
+    //     allocator.destroy(self.maxFolderSizeMB);
+    // }
 };
 
 test "paths" {
