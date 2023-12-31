@@ -9,7 +9,7 @@ pub fn main() !void {
     var allocator = gpa.allocator();
 
     const config = try loadConfig(allocator, "\\config.json");
-    defer config.deinit();
+    defer config.deinit(allocator);
 
     Handler.alloc = allocator;
     Handler.saveDirPath = config.absoluteSaveDir;
