@@ -41,7 +41,7 @@ pub fn main() !void {
 fn loadConfig(allocator: std.mem.Allocator, name: []const u8) !Config {
     const projPath = std.fs.realpathAlloc(allocator, ".") catch unreachable;
     defer allocator.free(projPath);
-    const configPath = try std.mem.concat(allocator, .{ projPath, name });
+    const configPath = try std.mem.concat(allocator, u8, .{ projPath, name });
     const file = try std.fs.openFileAbsolute(configPath, .{});
     defer file.close();
     const content = file.reader().readAllAlloc(allocator, 1024) catch unreachable;
