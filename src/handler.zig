@@ -47,11 +47,13 @@ pub const Handler = struct {
                         std.log.debug("    mimetype: {s}\n", .{mimetype});
                         std.log.debug("    contents: {any}\n", .{data});
 
-                        var f = saveDir.dir.createFile(filename, .{}) catch |err| switch (err) {
-                            fs.File.OpenError.PathAlreadyExists => {
-                                // generate new name
-                            },
-                            else => unreachable,
+                        var f = saveDir.dir.createFile(filename, .{}) catch |err| {
+                            switch (err) {
+                                fs.File.OpenError.PathAlreadyExists => {
+                                    // generate new name
+                                },
+                                else => unreachable,
+                            }
                         };
                         f.writeAll(data) catch unreachable;
                     },
