@@ -97,7 +97,7 @@ pub const Handler = struct {
             std.log.err("cannot check for terminate param: {any}\n", .{err});
         }
 
-        const result_str = try std.fmt.allocPrint(alloc, "{s}{s}", .{ linkPrefix, generatedName });
+        const result_str = std.fmt.allocPrint(alloc, "{s}{s}", .{ linkPrefix, generatedName }) catch unreachable;
         r.sendBody(result_str) catch unreachable;
     }
 };
