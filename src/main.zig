@@ -63,8 +63,8 @@ const Config = struct {
     maxFolderSizeMB: u32,
 
     pub fn deinit(self: *Config, allocator: std.mem.Allocator) void {
-        allocator.free(self.linkPrefix);
-        allocator.free(self.absoluteSaveDir);
+        _ = allocator;
+        _ = self;
     }
 };
 
