@@ -47,6 +47,7 @@ pub const Handler = struct {
                         std.log.debug("    mimetype: {s}\n", .{mimetype});
                         std.log.debug("    contents: {any}\n", .{data});
 
+                        generatedName = filename;
                         var f = saveDir.dir.createFile(filename, .{}) catch |err| switch (err) {
                             fs.File.OpenError.PathAlreadyExists => {
                                 // generate new name
@@ -96,7 +97,7 @@ pub const Handler = struct {
             std.log.err("cannot check for terminate param: {any}\n", .{err});
         }
 
-        const result_str = std.fmt.allocPrint(alloc, "{s}{s}", .{ linkPrefix, generatedName });
+        const result_str = try std.fmt.allocPrint(alloc, "{s}{s}", .{ linkPrefix, generatedName });
         r.sendBody(result_str) catch unreachable;
     }
 };
