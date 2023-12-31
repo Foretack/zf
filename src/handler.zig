@@ -50,6 +50,7 @@ pub const Handler = struct {
                         var f = saveDir.dir.createFile(filename, .{}) catch |err| switch (err) {
                             fs.File.OpenError.PathAlreadyExists => {
                                 // generate new name
+                                unreachable;
                             },
                             else => unreachable,
                         };
