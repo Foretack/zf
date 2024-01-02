@@ -94,7 +94,32 @@ pub const Handler = struct {
 
                             std.log.debug("    filename: `{s}`\n", .{filename});
                             std.log.debug("    mimetype: {s}\n", .{mimetype});
-                            std.log.debug("    contents: {any}\n", .{data});
+
+                            if (data.len >= maxDirSize) {
+                                r.sendError(anyerror.FileTooBig, 500);
+                                return;
+                            }
+
+                            generatedName = generateName(filename);
+                            var genAttempts: usize = 0;
+                            while (fileExists(saveDir, generatedName)) : (genAttempts += 1) {
+                                generatedName = generateName(filename);
+                                if (genAttempts >= 10) {
+                                    std.log.err("Failed to generate {any}-char long unique file name after 10 tries.\n", .{linkLength});
+                                    r.sendError(anyerror.FileNamesExhausted, 500);
+                                    return;
+                                }
+                            }
+
+                            var f = saveDir.dir.createFile(generatedName, .{}) catch |err| {
+                                r.sendError(err, 500);
+                                return;
+                            };
+
+                            f.writeAll(data) catch |err| {
+                                r.sendError(err, 500);
+                                return;
+                            };
                         }
                         files.*.deinit();
                     },
