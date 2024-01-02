@@ -21,14 +21,8 @@ pub const Handler = struct {
             return;
         };
 
-        if (r.body) |body| {
-            std.log.info("Body length is {any}\n", .{body.len});
-        }
         // check for query params (for ?terminate=true)
         r.parseQuery();
-
-        var param_count = r.getParamCount();
-        std.log.info("param_count: {}", .{param_count});
 
         const params = r.parametersToOwnedList(Handler.alloc, false) catch |err| {
             r.sendError(err, 500);
@@ -36,7 +30,6 @@ pub const Handler = struct {
         };
 
         defer params.deinit();
-        std.debug.print("\n\n\nOpening save directory {s}\n\n\n", .{saveDirPath});
         var saveDir = fs.openIterableDirAbsolute(saveDirPath, .{}) catch |err| {
             std.log.err("\n\n\nFailed to open save directory {s}: {any}\n\n\n", .{ saveDirPath, err });
             unreachable;
@@ -74,19 +67,20 @@ pub const Handler = struct {
                             generatedName = generateName(filename);
                             if (genAttempts >= 10) {
                                 std.log.err("Failed to generate {any}-char long unique file name after 10 tries.\n", .{linkLength});
-                                r.sendError(anyerror.FilenamesExhausted, 500);
+                                r.sendError(anyerror.FileNamesExhausted, 500);
                                 return;
                             }
                         }
 
-                        var f = saveDir.dir.createFile(generatedName, .{}) catch |err| switch (err) {
-                            fs.File.OpenError.PathAlreadyExists => {
-                                // generate new name
-                                unreachable;
-                            },
-                            else => unreachable,
+                        var f = saveDir.dir.createFile(generatedName, .{}) catch |err| {
+                            r.sendError(err, 500);
+                            return;
                         };
-                        f.writeAll(data) catch unreachable;
+
+                        f.writeAll(data) catch |err| {
+                            r.sendError(err, 500);
+                            return;
+                        };
                     },
                     // multi-file upload
                     zap.HttpParam.Array_Binfile => |*files| {
