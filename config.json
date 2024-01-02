@@ -3,6 +3,6 @@
     "linkPrefix": "https://www.example.com/",
     "absoluteSaveDir": "/home/occ/Desktop/uploads/",
     "maxSaveDirSizeMB": 1024,
-    "filenameLength": 1,
+    "filenameLength": 6,
     "genCharset": "ABCDEFGHIJKLMNOPQRRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890_-"
 }

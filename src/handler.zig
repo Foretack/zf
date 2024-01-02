@@ -63,6 +63,11 @@ pub const Handler = struct {
                         std.log.debug("    filename: `{s}`\n", .{filename});
                         std.log.debug("    mimetype: {s}\n", .{mimetype});
 
+                        if (data.len >= maxDirSize) {
+                            r.sendError(anyerror.FileTooBig, 500);
+                            return;
+                        }
+
                         generatedName = generateName(filename);
                         var genAttempts: usize = 0;
                         while (fileExists(saveDir, generatedName)) : (genAttempts += 1) {
