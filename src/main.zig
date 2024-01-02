@@ -34,7 +34,7 @@ pub fn main() !void {
     try listener.listen();
     std.log.info("\n\nURL is http://localhost:{any}\n", .{config.port});
     std.log.info("\ncurl -v --request POST -F img=@test012345.bin http://127.0.0.1:{any}\n", .{config.port});
-    std.log.info("\n\nTerminate with CTRL+C or by sending query param terminate=true\n", .{});
+    std.log.info("\n\nTerminate with CTRL+C\n", .{});
 
     zap.start(.{
         .threads = 1,

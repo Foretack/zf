@@ -12,6 +12,12 @@ pub const Handler = struct {
     pub var maxDirSize: usize = undefined;
 
     pub fn on_request(r: zap.SimpleRequest) void {
+        if (!std.mem.eql(u8, r.method.?, "POST") or !std.mem.eql(u8, r.path.?, "/upload")) {
+            r.setStatus(zap.StatusCode.method_not_allowed);
+            r.sendBody("only POST /upload is allowed.") catch return;
+            return;
+        }
+
         var generatedName: []const u8 = undefined;
 
         // check for FORM parameters
