@@ -28,8 +28,11 @@ pub const Handler = struct {
             r.sendError(err, 500);
             return;
         };
-
         defer params.deinit();
+        if (ensureDirExists(saveDirPath)) {
+            std.log.info("Directory created: {s}\n", .{saveDirPath});
+        }
+
         var saveDir = fs.openIterableDirAbsolute(saveDirPath, .{}) catch |err| {
             std.log.err("\n\n\nFailed to open save directory {s}: {any}\n\n\n", .{ saveDirPath, err });
             unreachable;
@@ -126,6 +129,11 @@ pub const Handler = struct {
         r.sendBody(result_str) catch unreachable;
         alloc.free(result_str);
         alloc.free(generatedName);
+    }
+
+    fn ensureDirExists(path: []const u8) bool {
+        std.fs.makeDirAbsolute(path) catch return false;
+        return true;
     }
 
     fn calcDirSize(iterable: std.fs.IterableDir) !usize {
