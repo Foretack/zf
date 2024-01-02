@@ -17,6 +17,7 @@ pub const Handler = struct {
         // check for FORM parameters
         r.parseBody() catch |err| {
             std.log.err("Parse Body error: {any}. Expected if body is empty", .{err});
+            r.sendError(err, 400);
             return;
         };
 
@@ -29,7 +30,11 @@ pub const Handler = struct {
         var param_count = r.getParamCount();
         std.log.info("param_count: {}", .{param_count});
 
-        const params = r.parametersToOwnedList(Handler.alloc, false) catch unreachable;
+        const params = r.parametersToOwnedList(Handler.alloc, false) catch |err| {
+            r.sendError(err, 500);
+            return;
+        };
+
         defer params.deinit();
         std.debug.print("\n\n\nOpening save directory {s}\n\n\n", .{saveDirPath});
         var saveDir = fs.openIterableDirAbsolute(saveDirPath, .{}) catch |err| {
@@ -45,7 +50,7 @@ pub const Handler = struct {
         if (dirSize < maxDirSize) {
             std.debug.print("dir size: {any}MB", .{dirSize / 1024 / 1024});
         }
-        std.debug.print("\n\n\nMichael is that you?\n\n\n", .{});
+
         for (params.items) |kv| {
             if (kv.value) |v| {
                 switch (v) {
@@ -59,7 +64,16 @@ pub const Handler = struct {
                         std.log.debug("    mimetype: {s}\n", .{mimetype});
 
                         generatedName = generateName(filename);
-                        std.debug.print("Generated: {s}\n", .{generatedName});
+                        var genAttempts: usize = 0;
+                        while (fileExists(saveDir, generatedName)) : (genAttempts += 1) {
+                            generatedName = generateName(filename);
+                            if (genAttempts >= 10) {
+                                std.log.err("Failed to generate {any}-char long unique file name after 10 tries.\n", .{linkLength});
+                                r.sendError(anyerror.FilenamesExhausted, 500);
+                                return;
+                            }
+                        }
+
                         var f = saveDir.dir.createFile(generatedName, .{}) catch |err| switch (err) {
                             fs.File.OpenError.PathAlreadyExists => {
                                 // generate new name
@@ -142,5 +156,15 @@ pub const Handler = struct {
         }
 
         return res;
+    }
+
+    fn fileExists(dir: std.fs.IterableDir, name: []const u8) bool {
+        var iterator = dir.iterate();
+        while (iterator.next() catch unreachable) |file| {
+            if (file.kind != .file) continue;
+            if (std.mem.eql(u8, file.name, name)) return true;
+        }
+
+        return false;
     }
 };

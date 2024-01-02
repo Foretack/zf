@@ -14,10 +14,10 @@ pub fn main() !void {
     Handler.alloc = allocator;
     Handler.saveDirPath = config.absoluteSaveDir;
     Handler.linkPrefix = config.linkPrefix;
-    Handler.linkLength = config.linkLength;
+    Handler.linkLength = config.filenameLength;
     Handler.rand = std.rand.Xoshiro256.init(u64time);
     Handler.genChars = config.genCharset;
-    Handler.maxDirSize = config.maxFolderSizeMB * 1024 * 1024;
+    Handler.maxDirSize = config.maxSaveDirSizeMB * 1024 * 1024;
 
     // setup listener
     var listener = zap.SimpleHttpListener.init(
@@ -65,8 +65,8 @@ const Config = struct {
     port: u16,
     linkPrefix: []u8,
     absoluteSaveDir: []u8,
-    maxFolderSizeMB: u32,
-    linkLength: u16,
+    maxSaveDirSizeMB: u32,
+    filenameLength: u16,
     genCharset: []u8,
 };
 
