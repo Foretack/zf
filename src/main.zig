@@ -8,7 +8,7 @@ pub fn main() !void {
     }){};
     var allocator = gpa.allocator();
 
-    var config = try loadConfig(allocator, "\\config.json");
+    var config = try loadConfig(allocator, "/config.json");
     defer config.deinit(allocator);
 
     Handler.alloc = allocator;
@@ -40,6 +40,7 @@ pub fn main() !void {
 
 fn loadConfig(allocator: std.mem.Allocator, name: []const u8) !Config {
     const projPath = std.fs.realpathAlloc(allocator, ".") catch unreachable;
+    std.debug.print("Config path: {s}\n", .{projPath});
     defer allocator.free(projPath);
     const configPath = try std.mem.concat(allocator, u8, &[_][]const u8{ projPath, name });
     const file = try std.fs.openFileAbsolute(configPath, .{});
