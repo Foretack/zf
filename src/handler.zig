@@ -160,6 +160,8 @@ pub const Handler = struct {
             return res;
         }
 
+        res = alloc.alloc(u8, linkLength) catch unreachable;
+        @memcpy(res[0..linkLength], genChars[0..linkLength]);
         return res;
     }
 
