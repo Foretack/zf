@@ -1,6 +1,7 @@
 const std = @import("std");
 const zap = @import("zap");
 const fs = @import("std").fs;
+const IterableDir = @import("std").fs.IterableDir;
 
 pub const Handler = struct {
     pub var alloc: std.mem.Allocator = undefined;
@@ -49,10 +50,6 @@ pub const Handler = struct {
             return;
         };
 
-        if (dirSize < maxDirSize) {
-            std.debug.print("dir size: {any}MB", .{dirSize / 1024 / 1024});
-        }
-
         for (params.items) |kv| {
             if (kv.value) |v| {
                 switch (v) {
@@ -68,6 +65,13 @@ pub const Handler = struct {
                         if (data.len >= maxDirSize) {
                             r.sendError(anyerror.FileTooBig, 500);
                             return;
+                        }
+
+                        if (dirSize + data.len > maxDirSize) {
+                            makeSpace(saveDir, data.len) catch |err| {
+                                r.sendError(err, 500);
+                                return;
+                            };
                         }
 
                         generatedName = generateName(filename);
@@ -104,6 +108,13 @@ pub const Handler = struct {
                             if (data.len >= maxDirSize) {
                                 r.sendError(anyerror.FileTooBig, 500);
                                 return;
+                            }
+
+                            if (dirSize + data.len > maxDirSize) {
+                                makeSpace(saveDir, data.len) catch |err| {
+                                    r.sendError(err, 500);
+                                    return;
+                                };
                             }
 
                             generatedName = generateName(filename);
@@ -162,12 +173,39 @@ pub const Handler = struct {
         alloc.free(generatedName);
     }
 
+    fn makeSpace(dir: IterableDir, bytes: usize) !void {
+        var min: i128 = 0;
+        var freed: i128 = 0;
+        while (freed < bytes) {
+            var itr = dir.iterate();
+            while (try itr.next()) |item| {
+                if (item.kind != .file) continue;
+                const file = try dir.dir.openFile(item.name, .{});
+                defer file.close();
+                const stat = try file.stat();
+                if (min == 0 or min > stat.mtime) min = stat.mtime;
+            }
+
+            itr = dir.iterate();
+            while (try itr.next()) |item| {
+                if (item.kind != .file) continue;
+                const file = try dir.dir.openFile(item.name, .{});
+                const stat = try file.stat();
+                file.close();
+                if (stat.mtime == min) {
+                    try dir.dir.deleteFile(item.name);
+                    freed += min;
+                }
+            }
+        }
+    }
+
     fn ensureDirExists(path: []const u8) bool {
-        std.fs.makeDirAbsolute(path) catch return false;
+        fs.makeDirAbsolute(path) catch return false;
         return true;
     }
 
-    fn calcDirSize(iterable: std.fs.IterableDir) !usize {
+    fn calcDirSize(iterable: IterableDir) !usize {
         var iterator = iterable.iterate();
         var byteSize: usize = 0;
         while (try iterator.next()) |file| {
@@ -198,7 +236,7 @@ pub const Handler = struct {
         return res;
     }
 
-    fn fileExists(dir: std.fs.IterableDir, name: []const u8) bool {
+    fn fileExists(dir: IterableDir, name: []const u8) bool {
         var iterator = dir.iterate();
         while (iterator.next() catch unreachable) |file| {
             if (file.kind != .file) continue;
