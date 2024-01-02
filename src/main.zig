@@ -9,18 +9,22 @@ pub fn main() !void {
     var allocator = gpa.allocator();
 
     var config = try loadConfig(allocator, "/config.json");
-    defer config.deinit(allocator);
+    const u64time: u64 = @intCast(std.time.timestamp());
 
     Handler.alloc = allocator;
     Handler.saveDirPath = config.absoluteSaveDir;
     Handler.linkPrefix = config.linkPrefix;
+    Handler.linkLength = config.linkLength;
+    Handler.rand = std.rand.Xoshiro256.init(u64time);
+    Handler.genChars = config.genCharset;
+    Handler.maxDirSize = config.maxFolderSizeMB * 1024 * 1024;
 
     // setup listener
     var listener = zap.SimpleHttpListener.init(
         .{
             .port = config.port,
             .on_request = Handler.on_request,
-            .log = true,
+            .log = false,
             .max_clients = 10,
             .max_body_size = 1024 * 1024 * 1024,
             .public_folder = ".",
@@ -62,11 +66,8 @@ const Config = struct {
     linkPrefix: []u8,
     absoluteSaveDir: []u8,
     maxFolderSizeMB: u32,
-
-    pub fn deinit(self: *Config, allocator: std.mem.Allocator) void {
-        _ = allocator;
-        _ = self;
-    }
+    linkLength: u16,
+    genCharset: []u8,
 };
 
 test "paths" {

@@ -6,6 +6,10 @@ pub const Handler = struct {
     pub var alloc: std.mem.Allocator = undefined;
     pub var saveDirPath: []const u8 = undefined;
     pub var linkPrefix: []const u8 = undefined;
+    pub var linkLength: u16 = 5;
+    pub var rand: std.rand.Xoshiro256 = undefined;
+    pub var genChars: []u8 = undefined;
+    pub var maxDirSize: usize = undefined;
 
     pub fn on_request(r: zap.SimpleRequest) void {
         var generatedName: []const u8 = undefined;
@@ -13,6 +17,7 @@ pub const Handler = struct {
         // check for FORM parameters
         r.parseBody() catch |err| {
             std.log.err("Parse Body error: {any}. Expected if body is empty", .{err});
+            return;
         };
 
         if (r.body) |body| {
@@ -24,18 +29,25 @@ pub const Handler = struct {
         var param_count = r.getParamCount();
         std.log.info("param_count: {}", .{param_count});
 
-        // iterate over all params
-        //
-        // HERE WE HANDLE THE BINARY FILE
-        //
         const params = r.parametersToOwnedList(Handler.alloc, false) catch unreachable;
         defer params.deinit();
-        var saveDir = fs.openIterableDirAbsolute(saveDirPath, .{}) catch unreachable;
+        std.debug.print("\n\n\nOpening save directory {s}\n\n\n", .{saveDirPath});
+        var saveDir = fs.openIterableDirAbsolute(saveDirPath, .{}) catch |err| {
+            std.log.err("\n\n\nFailed to open save directory {s}: {any}\n\n\n", .{ saveDirPath, err });
+            unreachable;
+        };
         defer saveDir.close();
+        const dirSize = calcDirSize(saveDir) catch |err| {
+            r.sendError(err, 500);
+            return;
+        };
+
+        if (dirSize < maxDirSize) {
+            std.debug.print("dir size: {any}MB", .{dirSize / 1024 / 1024});
+        }
+        std.debug.print("\n\n\nMichael is that you?\n\n\n", .{});
         for (params.items) |kv| {
             if (kv.value) |v| {
-                std.debug.print("\n", .{});
-                std.log.info("Param `{s}` in owned list is {any}\n", .{ kv.key.str, v });
                 switch (v) {
                     // single-file upload
                     zap.HttpParam.Hash_Binfile => |*file| {
@@ -45,10 +57,10 @@ pub const Handler = struct {
 
                         std.log.debug("    filename: `{s}`\n", .{filename});
                         std.log.debug("    mimetype: {s}\n", .{mimetype});
-                        std.log.debug("    contents: {any}\n", .{data});
 
-                        generatedName = filename;
-                        var f = saveDir.dir.createFile(filename, .{}) catch |err| switch (err) {
+                        generatedName = generateName(filename);
+                        std.debug.print("Generated: {s}\n", .{generatedName});
+                        var f = saveDir.dir.createFile(generatedName, .{}) catch |err| switch (err) {
                             fs.File.OpenError.PathAlreadyExists => {
                                 // generate new name
                                 unreachable;
@@ -99,5 +111,36 @@ pub const Handler = struct {
 
         const result_str = std.fmt.allocPrint(alloc, "{s}{s}", .{ linkPrefix, generatedName }) catch unreachable;
         r.sendBody(result_str) catch unreachable;
+        alloc.free(result_str);
+        alloc.free(generatedName);
+    }
+
+    fn calcDirSize(iterable: std.fs.IterableDir) !usize {
+        var iterator = iterable.iterate();
+        var byteSize: usize = 0;
+        while (try iterator.next()) |file| {
+            if (file.kind != .file) continue;
+            const f = try iterable.dir.openFile(file.name, .{});
+            defer f.close();
+            const stat = try f.stat();
+            byteSize += stat.size;
+        }
+
+        return byteSize;
+    }
+
+    fn generateName(from_name: []const u8) []u8 {
+        rand.random().shuffle(u8, genChars);
+        const dotIdx = std.mem.lastIndexOf(u8, from_name, ".");
+        var res: []u8 = undefined;
+        if (dotIdx) |dIdx| {
+            const extLen = from_name.len - dIdx;
+            res = alloc.alloc(u8, linkLength + extLen) catch unreachable;
+            @memcpy(res[0..linkLength], genChars[0..linkLength]);
+            @memcpy(res[linkLength..(linkLength + extLen)], from_name[dIdx..(dIdx + extLen)]);
+            return res;
+        }
+
+        return res;
     }
 };
