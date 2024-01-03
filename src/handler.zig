@@ -194,7 +194,7 @@ pub const Handler = struct {
                 file.close();
                 if (stat.mtime == min) {
                     try dir.dir.deleteFile(item.name);
-                    freed += min;
+                    freed += stat.size;
                 }
             }
         }
