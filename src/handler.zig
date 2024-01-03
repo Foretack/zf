@@ -97,6 +97,7 @@ pub const Handler = struct {
                     },
                     // multi-file upload
                     zap.HttpParam.Array_Binfile => |*files| {
+                        defer files.*.deinit();
                         for (files.*.items) |file| {
                             const filename = file.filename orelse "(no filename)";
                             const mimetype = file.mimetype orelse "(no mimetype)";
@@ -138,7 +139,6 @@ pub const Handler = struct {
                                 return;
                             };
                         }
-                        files.*.deinit();
                     },
                     else => {
                         // might be a string param, we don't care
