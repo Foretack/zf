@@ -195,9 +195,13 @@ pub const Handler = struct {
                 if (stat.mtime == min) {
                     try dir.dir.deleteFile(item.name);
                     freed += stat.size;
+                    min = 0;
+                    break;
                 }
             }
         }
+
+        std.log.info("Freed {any} byes\n", .{freed});
     }
 
     fn ensureDirExists(path: []const u8) bool {
