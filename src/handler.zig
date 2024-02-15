@@ -106,8 +106,11 @@ pub const Handler = struct {
                         var arena = std.heap.ArenaAllocator.init(alloc);
                         const a_alloc = arena.allocator();
                         defer arena.deinit();
-                        var list = try a_alloc.create(std.ArrayList([]const u8));
-                        defer list.deinit();
+                        var list = a_alloc.create(std.ArrayList([]const u8)) catch |err| {
+                            r.sendError(err, 500);
+                            return;
+                        };
+
                         for (files.*.items) |file| {
                             const filename = file.filename orelse "(no filename)";
                             const mimetype = file.mimetype orelse "(no mimetype)";
@@ -131,7 +134,11 @@ pub const Handler = struct {
                             dirSize += data.len;
 
                             generatedName = generateName(filename);
-                            try list.append(a_alloc.dupe(u8, generatedName) catch unreachable);
+                            list.append(a_alloc.dupe(u8, generatedName) catch unreachable) catch |err| {
+                                r.sendError(err, 500);
+                                return;
+                            };
+
                             var genAttempts: usize = 0;
                             while (fileExists(saveDir, generatedName)) : (genAttempts += 1) {
                                 generatedName = generateName(filename);
@@ -153,10 +160,18 @@ pub const Handler = struct {
                             };
                         }
 
-                        const res = try a_alloc.alloc(u8, list.items.len * (linkLength + linkPrefix.len + 1));
+                        const res = a_alloc.alloc(u8, list.items.len * (linkLength + linkPrefix.len + 1)) catch |err| {
+                            r.sendError(err, 500);
+                            return;
+                        };
+
                         var i: usize = 0;
                         for (list.items) |linkName| {
-                            const link = try std.fmt.allocPrint(a_alloc, "{s}{s}\n", .{ linkPrefix, linkName });
+                            const link = std.fmt.allocPrint(a_alloc, "{s}{s}\n", .{ linkPrefix, linkName }) catch |err| {
+                                r.sendError(err, 500);
+                                return;
+                            };
+
                             @memcpy(res[i .. linkLength + linkLength.len + 1], link);
                             i += linkLength + linkLength.len + 1;
                         }
