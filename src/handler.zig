@@ -225,7 +225,7 @@ pub const Handler = struct {
             }
         }
 
-        dirSize -= @as(usize, freed);
+        dirSize -= @intCast(freed);
         std.log.info("Freed {any} byes\n", .{freed});
     }
 
