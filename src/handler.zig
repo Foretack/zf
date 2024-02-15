@@ -12,6 +12,8 @@ pub const Handler = struct {
     pub var genChars: []u8 = undefined;
     pub var maxDirSize: usize = undefined;
 
+    var dirSize: usize = 0;
+
     pub fn on_request(r: zap.SimpleRequest) void {
         if (!std.mem.eql(u8, r.method.?, "POST") or !std.mem.eql(u8, r.path.?, "/upload")) {
             r.setStatus(zap.StatusCode.method_not_allowed);
@@ -45,7 +47,8 @@ pub const Handler = struct {
             unreachable;
         };
         defer saveDir.close();
-        const dirSize = calcDirSize(saveDir) catch |err| {
+
+        if (dirSize == 0) dirSize = calcDirSize(saveDir) catch |err| {
             r.sendError(err, 500);
             return;
         };
@@ -73,6 +76,8 @@ pub const Handler = struct {
                                 return;
                             };
                         }
+
+                        dirSize += data.len;
 
                         generatedName = generateName(filename);
                         var genAttempts: usize = 0;
@@ -201,6 +206,7 @@ pub const Handler = struct {
             }
         }
 
+        dirSize -= freed;
         std.log.info("Freed {any} byes\n", .{freed});
     }
 
