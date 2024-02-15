@@ -172,8 +172,8 @@ pub const Handler = struct {
                                 return;
                             };
 
-                            @memcpy(res[i .. linkLength + linkLength.len + 1], link);
-                            i += linkLength + linkLength.len + 1;
+                            @memcpy(res[i .. i + linkLength + linkPrefix.len + 1], link);
+                            i += linkLength + linkPrefix.len + 1;
                         }
 
                         r.sendBody(res) catch unreachable;
