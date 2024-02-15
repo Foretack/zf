@@ -103,6 +103,11 @@ pub const Handler = struct {
                     // multi-file upload
                     zap.HttpParam.Array_Binfile => |*files| {
                         defer files.*.deinit();
+                        var arena = std.heap.ArenaAllocator.init(alloc);
+                        const a_alloc = arena.allocator();
+                        defer arena.deinit();
+                        var list = try a_alloc.create(std.ArrayList([]const u8));
+                        defer list.deinit();
                         for (files.*.items) |file| {
                             const filename = file.filename orelse "(no filename)";
                             const mimetype = file.mimetype orelse "(no mimetype)";
@@ -123,7 +128,10 @@ pub const Handler = struct {
                                 };
                             }
 
+                            dirSize += data.len;
+
                             generatedName = generateName(filename);
+                            try list.append(a_alloc.dupe(u8, generatedName) catch unreachable);
                             var genAttempts: usize = 0;
                             while (fileExists(saveDir, generatedName)) : (genAttempts += 1) {
                                 generatedName = generateName(filename);
@@ -144,6 +152,17 @@ pub const Handler = struct {
                                 return;
                             };
                         }
+
+                        const res = try a_alloc.alloc(u8, list.items.len * (linkLength + linkPrefix.len + 1));
+                        var i: usize = 0;
+                        for (list.items) |linkName| {
+                            const link = try std.fmt.allocPrint(a_alloc, "{s}{s}\n", .{ linkPrefix, linkName });
+                            @memcpy(res[i .. linkLength + linkLength.len + 1], link);
+                            i += linkLength + linkLength.len + 1;
+                        }
+
+                        r.sendBody(res) catch unreachable;
+                        return;
                     },
                     else => {
                         // might be a string param, we don't care
